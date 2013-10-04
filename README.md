@@ -1,4 +1,4 @@
-pantuflabot
+PantuflaBot
 ===========
 
 Urban Terror administration bot.
