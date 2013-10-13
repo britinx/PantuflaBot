@@ -100,9 +100,9 @@ def check_admin(playernum): #True = Admin; False = NO
 	guid = searchguid(playernum)
 	dbcursor.execute("SELECT * FROM Players WHERE Guid=? AND Level>=5", (guid,))
 	row = dbcursor.fetchone()
+	if not row: return False
 	if guid == row[2]: #La comparamos con nuestra db.
 		return True
-	if not row: return False
 
 ## Cada vez que ingresa un player, comparar con la DB
 def check_player(playernum): #Devuelve NULL
@@ -120,6 +120,8 @@ def check_player(playernum): #Devuelve NULL
 			dbcursor.execute("INSERT INTO Players (Name, Guid, Level) VALUES(?,?,0)",(playername,playerguid))
 			dbconnection.commit() #Si no esta guardada, la agregamos.
 		else: print "DEBUG: Player conocido, no se agrega a la DB." #Si esta guardada, saltamos.
+		dbcursor.execute("SELECT * FROM Players WHERE Guid=?", (playerguid,))
+		row = dbcursor.fetchone()
 		dbcursor.execute("SELECT * FROM Aliases WHERE ID=?", (row[0],))
 		while True:
 			aliasrow = dbcursor.fetchone()
