@@ -119,16 +119,15 @@ def check_player(playernum): #Devuelve NULL
 			print "DEBUG: Player nuevo, agregando a la DB..."
 			dbcursor.execute("INSERT INTO Players (Name, Guid, Level) VALUES(?,?,0)",(playername,playerguid))
 			dbconnection.commit() #Si no esta guardada, la agregamos.
-		else:
-			print "DEBUG: Player conocido, no se agrega a la DB." #Si esta guardada, saltamos.
-			dbcursor.execute("SELECT * FROM Aliases WHERE ID=?", (row[0],))
-			while True:
-				aliasrow = dbcursor.fetchone()
-				if aliasrow == None: #Buscamos sus aliases y los guardamos
-					dbcursor.execute("INSERT INTO Aliases VALUES(?,?)",(row[0],playername))
-					dbconnection.commit()
-					break
-				if aliasrow[1] == playername: break
+		else: print "DEBUG: Player conocido, no se agrega a la DB." #Si esta guardada, saltamos.
+		dbcursor.execute("SELECT * FROM Aliases WHERE ID=?", (row[0],))
+		while True:
+			aliasrow = dbcursor.fetchone()
+			if aliasrow == None: #Buscamos sus aliases y los guardamos
+				dbcursor.execute("INSERT INTO Aliases VALUES(?,?)",(row[0],playername))
+				dbconnection.commit()
+				break
+			if aliasrow[1] == playername: break
 
 ## Puro easteregg.
 def cmd_anew(playername, playernum):
