@@ -3,19 +3,18 @@ import time
 import sys
 import sqlite3 as lite
 
-## Cosas utiles:
-HOST = "127.0.0.1"
-PORT = 27960
-RCONPWD = "test"
-
-SERVERLOG = "C:\Apps\URT41\q3ut4\zappa.log"
-CYCLEMAP = "C:\Apps\URT41\q3ut4\zappa_maps.txt"
-
+## Inicializacion:
 HEAD = "\xFF\xFF\xFF\xFFrcon "
 BOT = "say ^7[^4Pantufla^7] "
-
 VERMSG = "^7[^4Pantufla^7] Version 0.3.1 - by Mr.PanNegro - Inicializando..."
 WELCOME = "Hola, aqui estoy, a su servicio."
+
+CONFIG = "Pantufla.cfg"
+HOST = ""
+PORT = ""
+RCONPWD = ""
+SERVERLOG = ""
+CYCLEMAP = ""
 
 ## Super Parser (procurar que no se haga enorme)
 def parser_cmd(say):
@@ -300,18 +299,21 @@ if __name__ == "__main__":
 		#dbcursor.execute("DROP TABLE IF EXISTS Aliases") #en caso de error o prueba.
 		dbcursor.execute("CREATE TABLE IF NOT EXISTS Players(ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Guid TEXT, Level INT)")
 		dbcursor.execute("CREATE TABLE IF NOT EXISTS Aliases(ID INT, ALIAS TEXT)")
-		
-		#dbcursor.execute("SELECT * FROM Players") #Dumpeame todo para debug.
-		#rows = dbcursor.fetchall()
-		#for row in rows:
-			#print row
-		#dbcursor.execute("SELECT * FROM Aliases")
-		#rows = dbcursor.fetchall()
-		#for row in rows:
-			#print row
 	except lite.Error, e:
 		print "ERROR: %s:" % e.args[0]
 		sys.exit(1)
+
+	# Cargamos el archivo de config.
+	fconfig = open(CONFIG, 'r')
+	while True:
+		configline = fconfig.readline().split()
+		if not configline: break
+		else:
+			if configline[0] == "HOST": HOST = configline[2]
+			if configline[0] == "PORT": PORT = int(configline[2])
+			if configline[0] == "PASSWORD": RCONPWD = configline[2]
+			if configline[0] == "SERVERLOG": SERVERLOG = configline[2]
+			if configline[0] == "CYCLEMAP": CYCLEMAP = configline[2]
 	print "[Pantufla]: Inicializando programa... OK."
 
 	# Inicializacion del socket y mandamos nuestros primeros mensajes.
