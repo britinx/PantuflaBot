@@ -68,9 +68,15 @@ def parser_cmd(say):
 def send_rcon(comando): #Devuelve lo que responda el server.
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	#print "%s %s %s" %(HEAD,RCONPWD,comando) #Solo para dumpear.
-	sock.sendto("%s %s %s" %(HEAD,RCONPWD,comando), (HOST,PORT))
-	buffer = sock.recv(1024)
-	sock.close()
+	try:
+		sock.sendto("%s %s %s" %(HEAD,RCONPWD,comando), (HOST,PORT))
+		buffer = sock.recv(1024)
+		sock.close()
+	except Exception, e:
+		if sock:
+			sock.close()
+		print "ERROR %s: Problemas en la conexion con el servidor." %e.args[0]
+		sys.exit(1)
 	time.sleep(0.5)
 	return buffer
 
@@ -301,11 +307,15 @@ if __name__ == "__main__":
 		dbcursor.execute("CREATE TABLE IF NOT EXISTS Players(ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Guid TEXT, Level INT)")
 		dbcursor.execute("CREATE TABLE IF NOT EXISTS Aliases(ID INT, ALIAS TEXT)")
 	except lite.Error, e:
-		print "ERROR: %s:" %e.args[0]
+		print "ERROR %s: Problema con la base de datos." %e.args[0]
 		sys.exit(1)
 
 	# Cargamos el archivo de config.
-	fconfig = open(CONFIG, 'r')
+	try: fconfig = open(CONFIG, 'r')
+	except IOError, e:
+		print "ERROR %s: Falla al abrir el archivo de configuracion." %e.args[0]
+		sys.exit(1)
+
 	while True:
 		configline = fconfig.readline().split()
 		if not configline: break
