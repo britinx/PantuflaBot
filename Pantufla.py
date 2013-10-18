@@ -29,7 +29,7 @@ def parser_cmd(say):
 	#text[3] = Player Name
 	#text[4] = Comando
 	#text[5,..] = Argumentos	
-	if "ClientUserinfoChanged:" in text[1]:
+	if "ClientUserinfo:" in text[1]:
 		check_player(text[2])
 	elif "say:" in text[1]:
 		comando = text[4].rstrip("\n")
@@ -44,12 +44,18 @@ def parser_cmd(say):
 			if len(text) > 5: cmd_admin(playernum, text[5])
 		elif comando == "!alias":
 			if len(text) > 5: cmd_alias(playernum, text[5])
+		elif comando == "!id":
+			if len(text) > 5: cmd_id(playernum, text[5])
 		elif comando == "!recargar":
 			cmd_recargar(playernum)
 		elif comando == "!reiniciar":
 			cmd_reiniciar(playernum)
 		elif comando == "!kick" or comando == "!k":
 			if len(text) > 5: cmd_kick(playernum, text[5])
+		elif comando == "!ban":
+			if len(text) > 6: cmd_ban(playernum, text[5], text[6])
+		elif comando == "!unban":
+			if len(text) > 5: cmd_unban(playernum, text[5])
 		elif comando == "!slap":
 			if len(text) > 5: cmd_slap(playernum, text[5])
 		elif comando == "!nuke":
@@ -119,15 +125,17 @@ def check_player(playernum): #Devuelve NULL
 		if buf[0] == "name": playername = buf[1] #De toda la info buscamos el nick
 		elif buf[0] == "cl_guid": playerguid = buf[1] #y su GUID
 	if playerguid:
+		# Chequeamos si el player es nuevo.
 		dbcursor.execute("SELECT * FROM Players WHERE Guid=?", (playerguid,)) #Chequeamos si la GUID ya esta guardada
 		row = dbcursor.fetchone()
 		if row == None:
 			print "DEBUG: Player nuevo, agregando a la DB..."
 			dbcursor.execute("INSERT INTO Players (Name, Guid, Level) VALUES(?,?,0)",(playername,playerguid))
 			dbconnection.commit() #Si no esta guardada, la agregamos.
+			dbcursor.execute("SELECT * FROM Players WHERE Guid=?", (playerguid,)) #Pedimos la GUID nuevamente.
+			row = dbcursor.fetchone()
 		else: print "DEBUG: Player conocido, no se agrega a la DB." #Si esta guardada, saltamos.
-		dbcursor.execute("SELECT * FROM Players WHERE Guid=?", (playerguid,))
-		row = dbcursor.fetchone()
+		# Buscamos los aliases del player.
 		dbcursor.execute("SELECT * FROM Aliases WHERE ID=?", (row[0],))
 		while True:
 			aliasrow = dbcursor.fetchone()
@@ -136,6 +144,17 @@ def check_player(playernum): #Devuelve NULL
 				dbconnection.commit()
 				break
 			elif aliasrow[1] == playername: break
+		# Buscamos si el player esta banneado.
+		dbcursor.execute("SELECT * FROM Bans WHERE ID=?", (row[0],))
+		bansrow = dbcursor.fetchone()
+		if bansrow == None: print "DEBUG: Player habilitado para jugar."
+		else:
+			if bansrow[2] == 0:
+				send_rcon("kick %s" %playernum)
+				print "DEBUG: Player %s no habilitado para jugar." %playername
+			else:
+				print "DEBUG: Ban temporal no implementado."
+		return True	
 
 ## Puro easteregg.
 def cmd_anew(playername, playernum):
@@ -179,6 +198,21 @@ def cmd_alias(caller, partialname):
 			return False
 	else: print "DEBUG: Command ALIAS rejected, no admin"
 
+## Para averiguar el ID del PlayerName en la DB.
+def cmd_id(caller, partialname):
+	if check_admin(caller):
+		print "DEBUG: Command ID executed"
+		partialname = "%"+partialname.rstrip("\n")+"%"
+		dbcursor.execute("SELECT * FROM Players WHERE Name LIKE ?", (partialname,))
+		rows = dbcursor.fetchall()
+		if not rows: send_rcon("%s No hay IDs para ese nombre." %BOT)
+		else:
+			send_rcon("%s IDs encontrados:" %BOT)
+			for ids in rows: send_rcon("%s ^2@%s^7: %s" %(BOT,ids[0],ids[1]))
+			return True
+		return False
+	else: print "DEBUG: Command ID rejected, no admin"
+
 ## Para recargar la config y reiniciar el servidor.
 def cmd_recargar(caller):
 	if check_admin(caller):
@@ -204,6 +238,31 @@ def cmd_kick(caller, partialname):
 			send_rcon("kick %s" %playernumber) #Kickea al playernumber.
 			print "Debug: %s KICKED!" %playername
 	else: print "DEBUG: Command KICK rejected, no admin"
+
+def cmd_ban(caller, partialname, reason):
+	if check_admin(caller):
+		print "DEBUG: Command BAN executed"
+		reason = reason.rstrip("\n")
+		playernumber, playername = searchplayer(partialname)
+		if playername:
+			dbcursor.execute("SELECT * FROM Players WHERE Guid=?", (searchguid(playernumber),)) #Pedimos la info de esa GUID
+			row = dbcursor.fetchone()
+			dbcursor.execute("INSERT INTO Bans VALUES(?,?,0,?)",(row[0],time.time(),reason))
+			dbconnection.commit()
+			send_rcon("%s Banneando a: %s (Razon: %s)" %(BOT,playername,reason))
+			send_rcon("kick %s" %playernumber) #Kickea al playernumber.
+			print "Debug: %s BANNED!" %playername
+	else: print "DEBUG: Command BAN rejected, no admin"
+
+def cmd_unban(caller, id):
+	if check_admin(caller):
+		id = int(id)
+		print "DEBUG: Command DESBAN executed"
+		dbcursor.execute("DELETE FROM Bans WHERE Id=?", (id,))
+		send_rcon("%s ID %s desbanneado correctamente." %(BOT,id))
+		return True
+	else: print "DEBUG: Command UNBAN rejected, no admin"
+		
 
 ## Comando para slappear a alguien (SIEMPRE ABUSAN DE ESTO).
 def cmd_slap(caller, partialname):
@@ -304,8 +363,10 @@ if __name__ == "__main__":
 		dbcursor = dbconnection.cursor()
 		#dbcursor.execute("DROP TABLE IF EXISTS Players") #Solo para eliminar las tablas
 		#dbcursor.execute("DROP TABLE IF EXISTS Aliases") #en caso de error o prueba.
+		#dbcursor.execute("DROP TABLE IF EXISTS Bans")
 		dbcursor.execute("CREATE TABLE IF NOT EXISTS Players(ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Guid TEXT, Level INT)")
 		dbcursor.execute("CREATE TABLE IF NOT EXISTS Aliases(ID INT, ALIAS TEXT)")
+		dbcursor.execute("CREATE TABLE IF NOT EXISTS Bans(ID INT, Date FLOAT, Until FLOAT, Reason TEXT)")
 	except lite.Error, e:
 		print "ERROR %s: Problema con la base de datos." %e.args[0]
 		sys.exit(1)
