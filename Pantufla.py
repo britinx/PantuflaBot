@@ -98,12 +98,19 @@ def searchguid(playernum): #Si no encuentra = False
 ## Funcion que devuelve el PlayerNumber y PlayerName, con solo una parte del nombre.
 def searchplayer(partialname): #Si no encuentra = 0,False
 	partialname = partialname.rstrip("\n") #El comando seguramente viene con \n, quitarselo.
-	statuslist = send_rcon("status").split("\n") #Ordenamos el playerlist
-	for i in range(4,len(statuslist)-2):
-	#[0]=Number [1]=Score [2]=Ping [3]=Name [4]=Lastmsg [5]=IP [6]=QPort [7]=Rate
-		buf = statuslist[i].split()
-		if partialname in buf[3]: #Si el nombre concuerda con alguien del playerlist
-			return buf[0],buf[3]
+	if partialname[:1] == "@":
+		partialname = partialname[1:]
+		dbcursor.execute("SELECT * FROM Players WHERE ID=?", (partialname,))
+		row = dbcursor.fetchone()
+		if row == None: return 0,False
+		else: return row[0],"ID"
+	else:
+		statuslist = send_rcon("status").split("\n") #Ordenamos el playerlist
+		for i in range(4,len(statuslist)-2):
+		#[0]=Number [1]=Score [2]=Ping [3]=Name [4]=Lastmsg [5]=IP [6]=QPort [7]=Rate
+			buf = statuslist[i].split()
+			if partialname in buf[3]: #Si el nombre concuerda con alguien del playerlist
+				return buf[0],buf[3]
 	return 0,False
 
 ## Funcion que chequea si el player number es admin o no.
@@ -185,10 +192,12 @@ def cmd_alias(caller, partialname):
 		print "DEBUG: Command ALIAS executed"
 		playernumber, playername = searchplayer(partialname)
 		if playername:
-			guid = searchguid(playernumber) #Solicitamos su GUID
-			dbcursor.execute("SELECT * FROM Players WHERE Guid=?", (guid,)) #Pedimos la info de esa GUID
-			row = dbcursor.fetchone()
-			dbcursor.execute("SELECT * FROM Aliases WHERE ID=?", (row[0],)) #La lista de aliases para ese ID.
+			if playername is not "ID":
+				guid = searchguid(playernumber) #Solicitamos su GUID
+				dbcursor.execute("SELECT * FROM Players WHERE Guid=?", (guid,)) #Pedimos la info de esa GUID
+				row = dbcursor.fetchone()
+				playernumber = row[0]
+			dbcursor.execute("SELECT * FROM Aliases WHERE ID=?", (playernumber,)) #La lista de aliases para ese ID.
 			rows = dbcursor.fetchall()
 			send_rcon("%s Aliases de %s:" %(BOT,playername))
 			for rowaliases in rows: send_rcon("%s %s" %(BOT,rowaliases[1])) #Los tiramos uno por renglon.
@@ -205,10 +214,15 @@ def cmd_id(caller, partialname):
 		partialname = "%"+partialname.rstrip("\n")+"%"
 		dbcursor.execute("SELECT * FROM Players WHERE Name LIKE ?", (partialname,))
 		rows = dbcursor.fetchall()
-		if not rows: send_rcon("%s No hay IDs para ese nombre." %BOT)
+		dbcursor.execute("SELECT * FROM Aliases WHERE ALIAS LIKE ?", (partialname,))
+		aliasrows = dbcursor.fetchall()
+		if not rows and not aliasrows: send_rcon("%s No hay IDs para ese nombre." %BOT)
 		else:
 			send_rcon("%s IDs encontrados:" %BOT)
-			for ids in rows: send_rcon("%s ^2@%s^7: %s" %(BOT,ids[0],ids[1]))
+			if rows:
+				for ids in rows: send_rcon("%s ^2@%s^7: %s" %(BOT,ids[0],ids[1]))
+			if aliasrows:
+				for ids in aliasrows: send_rcon("%s ^2@%s^7: %s" %(BOT,ids[0],ids[1]))
 			return True
 		return False
 	else: print "DEBUG: Command ID rejected, no admin"
@@ -245,24 +259,30 @@ def cmd_ban(caller, partialname, reason):
 		reason = reason.rstrip("\n")
 		playernumber, playername = searchplayer(partialname)
 		if playername:
-			dbcursor.execute("SELECT * FROM Players WHERE Guid=?", (searchguid(playernumber),)) #Pedimos la info de esa GUID
-			row = dbcursor.fetchone()
-			dbcursor.execute("INSERT INTO Bans VALUES(?,?,0,?)",(row[0],time.time(),reason))
+			if playername is not "ID":
+				dbcursor.execute("SELECT * FROM Players WHERE Guid=?", (searchguid(playernumber),)) #Pedimos la info de esa GUID
+				row = dbcursor.fetchone()
+				send_rcon("kick %s" %playernumber) #Kickea al playernumber.
+				playernumber = row[0]
+			dbcursor.execute("INSERT INTO Bans VALUES(?,?,0,?)",(playernumber,time.time(),reason))
 			dbconnection.commit()
 			send_rcon("%s Banneando a: %s (Razon: %s)" %(BOT,playername,reason))
-			send_rcon("kick %s" %playernumber) #Kickea al playernumber.
 			print "Debug: %s BANNED!" %playername
 	else: print "DEBUG: Command BAN rejected, no admin"
 
 def cmd_unban(caller, id):
 	if check_admin(caller):
-		id = int(id)
-		print "DEBUG: Command DESBAN executed"
-		dbcursor.execute("DELETE FROM Bans WHERE Id=?", (id,))
-		send_rcon("%s ID %s desbanneado correctamente." %(BOT,id))
-		return True
+		if id[:1] == "@":
+			id = int(id[1:])
+			print "DEBUG: Command DESBAN executed"
+			dbcursor.execute("DELETE FROM Bans WHERE Id=?", (id,))
+			dbconnection.commit()
+			send_rcon("%s ID %s desbanneado correctamente." %(BOT,id))
+			return True
+		else:
+			send_rcon("%s ID invalida para quitar el ban." %BOT)
+			return False
 	else: print "DEBUG: Command UNBAN rejected, no admin"
-		
 
 ## Comando para slappear a alguien (SIEMPRE ABUSAN DE ESTO).
 def cmd_slap(caller, partialname):
