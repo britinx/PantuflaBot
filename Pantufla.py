@@ -6,7 +6,7 @@ import sqlite3 as lite
 ## Inicializacion:
 HEAD = "\xFF\xFF\xFF\xFFrcon"
 BOT = "say ^7[^4Pantufla^7]"
-VERMSG = "^7[^4Pantufla^7] Version 0.3.1 - by Mr.PanNegro - Inicializando..."
+VERMSG = "^7[^4Pantufla^7] Version 0.4-beta - by Mr.PanNegro - Inicializando..."
 WELCOME = "Hola, aqui estoy, a su servicio."
 
 CONFIG = "Pantufla.cfg"
@@ -41,9 +41,11 @@ def parser_cmd(say):
 		elif comando == "!pantufla":
 			cmd_pantufla(playernum)
 		elif comando == "!admin": #Siempre chequear el 5to argumento, es obligatorio.
-			if len(text) > 5: cmd_admin(playernum, text[5])
+			if len(text) > 6: cmd_admin(playernum, text[5], text[6])
 		elif comando == "!alias":
 			if len(text) > 5: cmd_alias(playernum, text[5])
+		elif comando == "!force":
+			if len(text) > 6: cmd_force(playernum, text[5], text[6])
 		elif comando == "!id":
 			if len(text) > 5: cmd_id(playernum, text[5])
 		elif comando == "!recargar":
@@ -121,7 +123,7 @@ def check_admin(playernum): #True = Admin; False = NO
 	row = dbcursor.fetchone()
 	if not row: return False
 	elif guid == row[2]: #La comparamos con nuestra db.
-		return True
+		return row[3]
 
 ## Cada vez que ingresa un player, comparar con la DB
 def check_player(playernum): #Devuelve NULL
@@ -165,21 +167,27 @@ def check_player(playernum): #Devuelve NULL
 
 ## Puro easteregg.
 def cmd_anew(playername, playernum):
-	if check_admin(playernum): send_rcon("%s %s :3" %(BOT,playername))
+	if check_admin(playernum) == 10: send_rcon("%s %s :3" %(BOT,playername))
 def cmd_pantufla(playernum):
-	if check_admin(playernum): send_rcon("%s Que bien que anda este bot niggas." %BOT)
+	if check_admin(playernum) == 10: send_rcon("%s Que bien que anda este bot niggas." %BOT)
 			
 ## Permite un admin agregar a otro admin
-def cmd_admin(caller, partialname):
-	if check_admin(caller):
+def cmd_admin(caller, partialname, level):
+	if check_admin(caller) == 10:
 		print "DEBUG: Command ADMIN executed"
+		level = level.rstrip("\n")
 		playernumber, playername = searchplayer(partialname)
 		if playername:
 			guid = searchguid(playernumber) #Solicitamos su GUID
-			dbcursor.execute("UPDATE Players SET Level=10 WHERE Guid=?",(guid,))
+			if level == "admin": dbcursor.execute("UPDATE Players SET Level=10 WHERE Guid=?",(guid,))
+			elif level == "moderador": dbcursor.execute("UPDATE Players SET Level=5 WHERE Guid=?",(guid,))
+			elif level == "regular": dbcursor.execute("UPDATE Players SET Level=0 WHERE Guid=?",(guid,))
+			else:
+				send_rcon("%s Por favor indique bien el nivel (admin, moderador o regular)" %BOT)
+				return False
 			dbconnection.commit() #Le modificamos el Level en la DB.
-			send_rcon("%s Nuevo admin en el sistema: ^2%s" %(BOT,playername)) #Notificamos el hecho
-			print "[Pantufla]: %s AGREGADO A ADMINS!" %playername
+			send_rcon("%s Poderes cambiados a: ^2%s (%s)" %(BOT,playername,level)) #Notificamos el hecho
+			print "[Pantufla]: %s PODERES CAMBIADOS!" %playername
 			return True #Salimos.
 		else:
 			send_rcon("%s No hay ningun jugador con ese nombre." %BOT)
@@ -188,7 +196,7 @@ def cmd_admin(caller, partialname):
 
 ## Permite buscar aliases de los players en la DB
 def cmd_alias(caller, partialname):
-	if check_admin(caller):
+	if check_admin(caller) >= 5:
 		print "DEBUG: Command ALIAS executed"
 		playernumber, playername = searchplayer(partialname)
 		if playername:
@@ -206,22 +214,46 @@ def cmd_alias(caller, partialname):
 			send_rcon("%s No hay ningun jugador con ese nombre." %BOT)
 			return False
 	else: print "DEBUG: Command ALIAS rejected, no admin"
+	
+def cmd_force(caller, partialname, team):
+	if check_admin(caller) >= 5:
+		print "DEBUG: Command FORCE executed"
+		playernumber, playername = searchplayer(partialname)
+		if playername:
+			team = team.rstrip("\n")
+			if team == "rojo":
+				send_rcon("forceteam %s red" %playernumber)
+				send_rcon("%s Jugador ^2%s forzado al equipo ^1ROJO." %(BOT, playername))
+			elif team == "azul":
+				send_rcon("forceteam %s blue" %playernumber)
+				send_rcon("%s Jugador ^2%s forzado al equipo ^4AZUL." %(BOT, playername))
+			elif team == "spec":
+				send_rcon("forceteam %s spectator" %playernumber)
+				send_rcon("%s Jugador ^2%s forzado como ^2espectador." %(BOT, playername))
+			else:
+				send_rcon("%s Por favor indicar a donde mover al jugador: ^1rojo^7, ^4azul ^7o spec." %BOT)
+				return False
+			return True
+		else:
+			send_rcon("%s No hay ningun jugador con ese nombre." %BOT)
+			return False
+	else: print "DEBUG: Command FORCE rejected, no admin"
 
-## Para averiguar el ID del PlayerName en la DB.
+## Para averiguar el @ID del PlayerName en la DB.
 def cmd_id(caller, partialname):
-	if check_admin(caller):
+	if check_admin(caller) >= 5:
 		print "DEBUG: Command ID executed"
-		partialname = "%"+partialname.rstrip("\n")+"%"
+		partialname = "%"+partialname.rstrip("\n")+"%" #Formateo para SQLite3.
 		dbcursor.execute("SELECT * FROM Players WHERE Name LIKE ?", (partialname,))
-		rows = dbcursor.fetchall()
+		rows = dbcursor.fetchall() #Buscamos nombres similares a partialname.
 		dbcursor.execute("SELECT * FROM Aliases WHERE ALIAS LIKE ?", (partialname,))
-		aliasrows = dbcursor.fetchall()
+		aliasrows = dbcursor.fetchall() #Buscamos aliases similares a partialname.
 		if not rows and not aliasrows: send_rcon("%s No hay IDs para ese nombre." %BOT)
 		else:
 			send_rcon("%s IDs encontrados:" %BOT)
-			if rows:
-				for ids in rows: send_rcon("%s ^2@%s^7: %s" %(BOT,ids[0],ids[1]))
-			if aliasrows:
+			#if rows: #Si encontramos la ID en los nombres, mostrar.
+				#for ids in rows: send_rcon("%s ^2@%s^7: %s" %(BOT,ids[0],ids[1]))
+			if aliasrows: #Si encontramos la ID en los aliases, mostrar.
 				for ids in aliasrows: send_rcon("%s ^2@%s^7: %s" %(BOT,ids[0],ids[1]))
 			return True
 		return False
@@ -229,7 +261,7 @@ def cmd_id(caller, partialname):
 
 ## Para recargar la config y reiniciar el servidor.
 def cmd_recargar(caller):
-	if check_admin(caller):
+	if check_admin(caller) == 10:
 		print "DEBUG: Command RECARGAR executed"
 		send_rcon("%s Reiniciando el servidor..." %BOT)
 		send_rcon("reload")
@@ -237,15 +269,15 @@ def cmd_recargar(caller):
 
 ## Para reiniciar la partida solamente.
 def cmd_reiniciar(caller):
-	if check_admin(caller):
+	if check_admin(caller) == 10:
 		print "DEBUG: Command REINICIAR executed"
 		send_rcon("%s Reiniciando el mapa actual." %BOT)
 		send_rcon("restart")
 	else: print "DEBUG: Command REINICIAR rejected, no admin"
 
-## Kick a un player, ya sea por PlayerName o PlayerNumber
+## Comando para expulsar a un PlayerName.
 def cmd_kick(caller, partialname):
-	if check_admin(caller):
+	if check_admin(caller) >= 5:
 		print "DEBUG: Command KICK executed"
 		playernumber, playername = searchplayer(partialname)
 		if playername:
@@ -253,30 +285,32 @@ def cmd_kick(caller, partialname):
 			print "Debug: %s KICKED!" %playername
 	else: print "DEBUG: Command KICK rejected, no admin"
 
+## Comando para bannear a un PlayerName o @ID.
 def cmd_ban(caller, partialname, reason):
-	if check_admin(caller):
+	if check_admin(caller) == 10:
 		print "DEBUG: Command BAN executed"
 		reason = reason.rstrip("\n")
 		playernumber, playername = searchplayer(partialname)
 		if playername:
-			if playername is not "ID":
+			if playername is not "ID": #Iniciamos la busqueda del Guid en caso que se banee un nombre.
 				dbcursor.execute("SELECT * FROM Players WHERE Guid=?", (searchguid(playernumber),)) #Pedimos la info de esa GUID
 				row = dbcursor.fetchone()
 				send_rcon("kick %s" %playernumber) #Kickea al playernumber.
 				playernumber = row[0]
 			dbcursor.execute("INSERT INTO Bans VALUES(?,?,0,?)",(playernumber,time.time(),reason))
-			dbconnection.commit()
+			dbconnection.commit() #Sino, simplemente banneamos por @ID.
 			send_rcon("%s Banneando a: %s (Razon: %s)" %(BOT,playername,reason))
 			print "Debug: %s BANNED!" %playername
 	else: print "DEBUG: Command BAN rejected, no admin"
 
+## Comando para quitarle el ban a un @ID.
 def cmd_unban(caller, id):
-	if check_admin(caller):
-		if id[:1] == "@":
+	if check_admin(caller) == 10:
+		if id[:1] == "@": #Asegurarse que quiera desbannear un @ID.
 			id = int(id[1:])
 			print "DEBUG: Command DESBAN executed"
 			dbcursor.execute("DELETE FROM Bans WHERE Id=?", (id,))
-			dbconnection.commit()
+			dbconnection.commit() #Mandamos a borrar el ban sin chequear.
 			send_rcon("%s ID %s desbanneado correctamente." %(BOT,id))
 			return True
 		else:
@@ -286,7 +320,7 @@ def cmd_unban(caller, id):
 
 ## Comando para slappear a alguien (SIEMPRE ABUSAN DE ESTO).
 def cmd_slap(caller, partialname):
-	if check_admin(caller):
+	if check_admin(caller) == 10:
 		print "DEBUG: Command SLAP executed"
 		playernumber, playername = searchplayer(partialname)
 		if playername:
@@ -296,7 +330,7 @@ def cmd_slap(caller, partialname):
 
 ## Comando para nukear a alguien (SIEMPRE ABUSAN DE ESTO).
 def cmd_nuke(caller, partialname):
-	if check_admin(caller):
+	if check_admin(caller) == 10:
 		print "DEBUG: Command NUKE executed"
 		playernumber, playername = searchplayer(partialname)
 		if playername:
@@ -306,7 +340,7 @@ def cmd_nuke(caller, partialname):
 
 ## Comando para cambiar el mapa instantaneamente.
 def cmd_map(caller, mapname): #True = Mapa cambiado; False = NO.
-	if check_admin(caller):
+	if check_admin(caller) >=5:
 		print "DEBUG: Command MAP executed"
 		mapname = mapname.rstrip("\n") #El comando probablemente venga con \n.
 		with open(CYCLEMAP, 'r') as fmap: availablemaps = fmap.read().splitlines() #Abrimos el cycle y armamos la lista.
@@ -323,7 +357,7 @@ def cmd_map(caller, mapname): #True = Mapa cambiado; False = NO.
 
 ## Comando para ver y cambiar el mapa siguiente.
 def cmd_nextmap(caller, mapname): #True = Mapa cambiado; False = NO.
-	if check_admin(caller):
+	if check_admin(caller) >=5:
 		print "DEBUG: Command NEXTMAP executed"
 		if mapname == None:
 			#Habria que implementar que diga el nextmap
@@ -343,7 +377,7 @@ def cmd_nextmap(caller, mapname): #True = Mapa cambiado; False = NO.
 
 ## Comando para iniciar el matchmode:
 def cmd_matchmode(caller, mode): #True = Listo para empezar; False = Error.
-	if check_admin(caller):
+	if check_admin(caller) == 10:
 		print "DEBUG: Command CERRADO executed" #Va con argumento (TS, CTF, etc...)
 		if mode.rstrip("\n") == "ts": #El comando probablemente venga con \n.
 			send_rcon("%s Cerrando el server para un partido de TS..." %BOT)
@@ -361,7 +395,7 @@ def cmd_matchmode(caller, mode): #True = Listo para empezar; False = Error.
 
 ## Comando para hacer publico el server:
 def cmd_publicmode(caller, mode): #True = Listo para empezar; False = Error.
-	if check_admin(caller):
+	if check_admin(caller) == 10:
 		print "DEBUG: Command PUBLICO executed" #Va con argumento (TS, CTF, etc...)
 		if mode.rstrip("\n") == "ts": #El comando probablemente venga con \n.
 			send_rcon("%s Abriendo el server en modo TS." %BOT)
