@@ -14,12 +14,20 @@ Los comandos que posee son:
 		<td>Responde un mensaje si el player es administrador.</td>
 		</tr>
 		<tr>
-		<td>!admin [PLAYER]</td>
-		<td>Le da permisos de admin al PLAYER mencionado.</td>
+		<td>!admin [PLAYER] [TIPO]</td>
+		<td>Cambia los permisos de admin al PLAYER mencionado. Tipos: ADMIN, MODERADOR, REGULAR</td>
 		</tr>
 		<tr>
-		<td>!alias [PLAYER]</td>
-		<td>Devuelve los aliases del PLAYER mencionado.</td>
+		<td>!alias [PLAYER]/[@ID]</td>
+		<td>Devuelve los aliases del PLAYER o ID mencionado.</td>
+		</tr>
+		<tr>
+		<td>!force [PLAYER] [EQUIPO]</td>
+		<td>Fuerza al PLAYER mencionado a pasarse al equipo especificado (o a los espectadores).</td>
+		</tr>
+		<tr>
+		<td>!id [PLAYER]</td>
+		<td>Busca en la DB los IDs de los players mencionados.</td>
 		</tr>
 		<tr>
 		<td>!recargar</td>
@@ -30,8 +38,20 @@ Los comandos que posee son:
 		<td>Reinicia la partida instantaneamente, no recarga la configuración.</td>
 		</tr>
 		<tr>
+		<td>!teams</td>
+		<td>Intenta equilibrar los equipos en cantidad de jugadores (seleccionando uno al azar).</td>
+		</tr>
+		<tr>
 		<td>!kick [PLAYER]</td>
-		<td>Echa a un jugador de la partida.</td>
+		<td>Expulsa a un jugador de la partida.</td>
+		</tr>
+		<tr>
+		<td>!ban [PLAYER]/[@ID] [RAZON]</td>
+		<td>Bannea permanentemente a un jugador o ID.</td>
+		</tr>
+		<tr>
+		<td>!unban [PLAYER]/[@ID]</td>
+		<td>Le quita el ban a un ID (correspondiente a un jugador).</td>
 		</tr>
 		<tr>
 		<td>!slap [PLAYER]</td>
@@ -42,12 +62,16 @@ Los comandos que posee son:
 		<td>Intenta matar a un jugador de la partida.</td>
 		</tr>
 		<tr>
+		<td>!mute [PLAYER]</td>
+		<td>Deja mudo a un jugador de la partida o le devuelve la voz si se encontraba muteado.</td>
+		</tr>
+		<tr>
 		<td>!map [MAPA]</td>
 		<td>Cambia el mapa de juego instantaneamente.</td>
 		</tr>
 		<tr>
 		<td>!nextmap [MAPA]</td>
-		<td>Cambia el mapa de la siguiente ronda del juego.</td>
+		<td>Cambia el mapa de la siguiente ronda del juego, o dice que mapa sigue si no se le especifica uno.</td>
 		</tr>
 		<tr>
 		<td>!cerrado [MODO]</td>

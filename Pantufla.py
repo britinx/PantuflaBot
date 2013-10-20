@@ -2,11 +2,12 @@ import socket
 import time
 import sys
 import sqlite3 as lite
+from random import choice
 
 ## Inicializacion:
 HEAD = "\xFF\xFF\xFF\xFFrcon"
 BOT = "say ^7[^4Pantufla^7]"
-VERMSG = "^7[^4Pantufla^7] Version 0.4-beta - by Mr.PanNegro - Inicializando..."
+VERMSG = "^7[^4Pantufla^7] Version 0.4b - by Mr.PanNegro - Inicializando..."
 WELCOME = "Hola, aqui estoy, a su servicio."
 
 CONFIG = "Pantufla.cfg"
@@ -52,6 +53,8 @@ def parser_cmd(say):
 			cmd_recargar(playernum)
 		elif comando == "!reiniciar":
 			cmd_reiniciar(playernum)
+		elif comando == "!teams":
+			cmd_teams(playernum)
 		elif comando == "!kick" or comando == "!k":
 			if len(text) > 5: cmd_kick(playernum, text[5])
 		elif comando == "!ban":
@@ -62,6 +65,8 @@ def parser_cmd(say):
 			if len(text) > 5: cmd_slap(playernum, text[5])
 		elif comando == "!nuke":
 			if len(text) > 5: cmd_nuke(playernum, text[5])
+		elif comando == "!mute":
+			if len(text) > 5: cmd_mute(playernum, text[5])
 		elif comando == "!map":
 			if len(text) > 5: cmd_map(playernum, text[5])
 		elif comando == "!nextmap":
@@ -214,7 +219,8 @@ def cmd_alias(caller, partialname):
 			send_rcon("%s No hay ningun jugador con ese nombre." %BOT)
 			return False
 	else: print "DEBUG: Command ALIAS rejected, no admin"
-	
+
+## Comando para forzar un jugador hacia otro equipo o a espectadores.
 def cmd_force(caller, partialname, team):
 	if check_admin(caller) >= 5:
 		print "DEBUG: Command FORCE executed"
@@ -275,6 +281,31 @@ def cmd_reiniciar(caller):
 		send_rcon("restart")
 	else: print "DEBUG: Command REINICIAR rejected, no admin"
 
+## Comando para equilibrar equipos (eligiendo uno al azar).
+def cmd_teams(caller):
+	if check_admin(caller) >= 5:
+		print "DEBUG: Command TEAMS executed"
+		# La cvar "g_xTeamList" devuelve "ABC..Xn" donde cada letra corresponde a un PlayerNumber.
+		rteamlist = send_rcon("g_redTeamList").split('"') #Buscamos la lista de players.
+		bteamlist = send_rcon("g_blueTeamList").split('"')
+		teamdiff = len(rteamlist[3]) - len(bteamlist[3]) #Sacamos la diferencia.
+		if teamdiff >= 2:
+			send_rcon("%s Equilibrando equipos..." %BOT)
+			rteamlist = rteamlist[3][:2]
+			playerselectd = ord(choice(rteamlist))-65 #Convertimos la letra a un int.
+			send_rcon("forceteam %s blue" %playerselectd) #Forzamos y chau.
+			return True
+		elif teamdiff <= -2:
+			send_rcon("%s Equilibrando equipos..." %BOT)
+			bteamlist = bteamlist[3][:2]
+			playerselectd = ord(choice(bteamlist))-65
+			send_rcon("forceteam %s red" %playerselectd)
+			return True
+		else: #Si hay una diferencia menor o igual a 1 jugador.
+			send_rcon("%s Los equipos ya estan equilibrados (en cantidad)." %BOT)
+			return False
+	else: print "DEBUG: Command TEAMS rejected, no admin"	
+
 ## Comando para expulsar a un PlayerName.
 def cmd_kick(caller, partialname):
 	if check_admin(caller) >= 5:
@@ -326,6 +357,9 @@ def cmd_slap(caller, partialname):
 		if playername:
 			send_rcon("slap %s" %playernumber) #Slapea al playernumber.
 			print "Debug: %s SLAPPED!" %playername
+		else:
+			send_rcon("%s No hay ningun jugador con ese nombre." %BOT)
+			return False
 	else: print "DEBUG: Command SLAP rejected, no admin"
 
 ## Comando para nukear a alguien (SIEMPRE ABUSAN DE ESTO).
@@ -336,7 +370,24 @@ def cmd_nuke(caller, partialname):
 		if playername:
 			send_rcon("nuke %s" %playernumber) #Nuke al playernumber.
 			print "Debug: %s NUKED!" %playername
+		else:
+			send_rcon("%s No hay ningun jugador con ese nombre." %BOT)
+			return False
 	else: print "DEBUG: Command NUKE rejected, no admin"
+
+## Comando para mutear a alguien.
+def cmd_mute(caller, partialname):
+	if check_admin(caller) >= 5:
+		print "DEBUG: Command MUTE executed"
+		playernumber, playername = searchplayer(partialname)
+		if playername:
+			send_rcon("mute %s" %playernumber) #Nuke al playernumber.
+			print "Debug: %s MUTED!" %playername
+			return True
+		else:
+			send_rcon("%s No hay ningun jugador con ese nombre." %BOT)
+			return False
+	else: print "DEBUG: Command MUTE rejected, no admin"
 
 ## Comando para cambiar el mapa instantaneamente.
 def cmd_map(caller, mapname): #True = Mapa cambiado; False = NO.
@@ -348,7 +399,7 @@ def cmd_map(caller, mapname): #True = Mapa cambiado; False = NO.
 		for x in range(len(availablemaps)):
 			if mapname in availablemaps[x]:
 				send_rcon("%s Cambiando el mapa a %s" %(BOT,availablemaps[x]))
-				time.sleep(3)
+				time.sleep(1)
 				send_rcon("map %s" %availablemaps[x]) #Si el mapa esta en el cycle, cambiar.
 				return True
 		send_rcon("%s No encuentro ningun mapa con ese nombre." %BOT)
@@ -359,16 +410,26 @@ def cmd_map(caller, mapname): #True = Mapa cambiado; False = NO.
 def cmd_nextmap(caller, mapname): #True = Mapa cambiado; False = NO.
 	if check_admin(caller) >=5:
 		print "DEBUG: Command NEXTMAP executed"
+		with open(CYCLEMAP, 'r') as fmap: availablemaps = fmap.read().splitlines() #Abrimos el cycle y armamos la lista.
+		fmap.close()
 		if mapname == None:
-			#Habria que implementar que diga el nextmap
-			return False
+			buffer = send_rcon("g_nextmap").split('"') #Vemos si el nextmap ya se cambio.
+			if buffer[3] == "^7": #Si el nextmap no se cambio, calcularlo.
+				buffer = send_rcon("status").split("\n")
+				buffer = buffer[1].split()
+				for x in range(len(availablemaps)):
+					if buffer[1] in availablemaps[x]:
+						send_rcon("%s El mapa siguiente es: ^2%s" %(BOT,availablemaps[x+1]))
+						return True
+				return False
+			else: #Si el nextmap se cambio, mostrar a cual.
+				send_rcon("%s El mapa siguiente es: ^2%s" %(BOT,buffer[3]))
+				return True
 		else:
 			mapname = mapname.rstrip("\n") #El comando probablemente venga con \n.
-			with open(CYCLEMAP, 'r') as fmap: availablemaps = fmap.read().splitlines() #Abrimos el cycle y armamos la lista.
-			fmap.close()
 			for x in range(len(availablemaps)):
 				if mapname in availablemaps[x]:
-					send_rcon("%s Cambiando el mapa SIGUIENTE a %s" %(BOT,availablemaps[x]))
+					send_rcon("%s Cambiando el mapa SIGUIENTE a ^2%s" %(BOT,availablemaps[x]))
 					send_rcon("g_nextmap %s" %availablemaps[x]) #Si el mapa esta en el cycle, cambiar.
 					return True
 			send_rcon("%s No encuentro ningun mapa con ese nombre." %BOT)
