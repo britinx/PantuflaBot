@@ -8,9 +8,8 @@ from random import choice
 HEAD = "\xFF\xFF\xFF\xFFrcon"
 BOT = "say ^7[^4Pantufla^7]"
 VERMSG = "^7[^4Pantufla^7] Version 0.4b - by Mr.PanNegro - Inicializando..."
-WELCOME = "Hola, aqui estoy, a su servicio."
 
-CONFIG = "Pantufla.cfg"
+FCONFIG = "Pantufla.cfg"
 HOST = ""
 PORT = ""
 RCONPWD = ""
@@ -201,7 +200,7 @@ def cmd_admin(caller, partialname, level):
 
 ## Permite buscar aliases de los players en la DB
 def cmd_alias(caller, partialname):
-	if check_admin(caller) >= 5:
+	if check_admin(caller) >= LVL_ALIAS:
 		print "DEBUG: Command ALIAS executed"
 		playernumber, playername = searchplayer(partialname)
 		if playername:
@@ -222,7 +221,7 @@ def cmd_alias(caller, partialname):
 
 ## Comando para forzar un jugador hacia otro equipo o a espectadores.
 def cmd_force(caller, partialname, team):
-	if check_admin(caller) >= 5:
+	if check_admin(caller) >= LVL_FORCE:
 		print "DEBUG: Command FORCE executed"
 		playernumber, playername = searchplayer(partialname)
 		if playername:
@@ -247,7 +246,7 @@ def cmd_force(caller, partialname, team):
 
 ## Para averiguar el @ID del PlayerName en la DB.
 def cmd_id(caller, partialname):
-	if check_admin(caller) >= 5:
+	if check_admin(caller) >= LVL_ID:
 		print "DEBUG: Command ID executed"
 		partialname = "%"+partialname.rstrip("\n")+"%" #Formateo para SQLite3.
 		dbcursor.execute("SELECT * FROM Players WHERE Name LIKE ?", (partialname,))
@@ -267,7 +266,7 @@ def cmd_id(caller, partialname):
 
 ## Para recargar la config y reiniciar el servidor.
 def cmd_recargar(caller):
-	if check_admin(caller) == 10:
+	if check_admin(caller) >= LVL_RECARGAR:
 		print "DEBUG: Command RECARGAR executed"
 		send_rcon("%s Reiniciando el servidor..." %BOT)
 		send_rcon("reload")
@@ -275,7 +274,7 @@ def cmd_recargar(caller):
 
 ## Para reiniciar la partida solamente.
 def cmd_reiniciar(caller):
-	if check_admin(caller) == 10:
+	if check_admin(caller) >= LVL_REINICIAR:
 		print "DEBUG: Command REINICIAR executed"
 		send_rcon("%s Reiniciando el mapa actual." %BOT)
 		send_rcon("restart")
@@ -283,7 +282,7 @@ def cmd_reiniciar(caller):
 
 ## Comando para equilibrar equipos (eligiendo uno al azar).
 def cmd_teams(caller):
-	if check_admin(caller) >= 5:
+	if check_admin(caller) >= LVL_TEAMS:
 		print "DEBUG: Command TEAMS executed"
 		# La cvar "g_xTeamList" devuelve "ABC..Xn" donde cada letra corresponde a un PlayerNumber.
 		rteamlist = send_rcon("g_redTeamList").split('"') #Buscamos la lista de players.
@@ -308,7 +307,7 @@ def cmd_teams(caller):
 
 ## Comando para expulsar a un PlayerName.
 def cmd_kick(caller, partialname):
-	if check_admin(caller) >= 5:
+	if check_admin(caller) >= LVL_KICK:
 		print "DEBUG: Command KICK executed"
 		playernumber, playername = searchplayer(partialname)
 		if playername:
@@ -318,7 +317,7 @@ def cmd_kick(caller, partialname):
 
 ## Comando para bannear a un PlayerName o @ID.
 def cmd_ban(caller, partialname, reason):
-	if check_admin(caller) == 10:
+	if check_admin(caller) >= LVL_BAN:
 		print "DEBUG: Command BAN executed"
 		reason = reason.rstrip("\n")
 		playernumber, playername = searchplayer(partialname)
@@ -336,7 +335,7 @@ def cmd_ban(caller, partialname, reason):
 
 ## Comando para quitarle el ban a un @ID.
 def cmd_unban(caller, id):
-	if check_admin(caller) == 10:
+	if check_admin(caller) >= LVL_UNBAN:
 		if id[:1] == "@": #Asegurarse que quiera desbannear un @ID.
 			id = int(id[1:])
 			print "DEBUG: Command DESBAN executed"
@@ -351,7 +350,7 @@ def cmd_unban(caller, id):
 
 ## Comando para slappear a alguien (SIEMPRE ABUSAN DE ESTO).
 def cmd_slap(caller, partialname):
-	if check_admin(caller) == 10:
+	if check_admin(caller) >= LVL_SLAP:
 		print "DEBUG: Command SLAP executed"
 		playernumber, playername = searchplayer(partialname)
 		if playername:
@@ -364,7 +363,7 @@ def cmd_slap(caller, partialname):
 
 ## Comando para nukear a alguien (SIEMPRE ABUSAN DE ESTO).
 def cmd_nuke(caller, partialname):
-	if check_admin(caller) == 10:
+	if check_admin(caller) >= LVL_NUKE:
 		print "DEBUG: Command NUKE executed"
 		playernumber, playername = searchplayer(partialname)
 		if playername:
@@ -377,7 +376,7 @@ def cmd_nuke(caller, partialname):
 
 ## Comando para mutear a alguien.
 def cmd_mute(caller, partialname):
-	if check_admin(caller) >= 5:
+	if check_admin(caller) >= LVL_MUTE:
 		print "DEBUG: Command MUTE executed"
 		playernumber, playername = searchplayer(partialname)
 		if playername:
@@ -391,7 +390,7 @@ def cmd_mute(caller, partialname):
 
 ## Comando para cambiar el mapa instantaneamente.
 def cmd_map(caller, mapname): #True = Mapa cambiado; False = NO.
-	if check_admin(caller) >=5:
+	if check_admin(caller) >= LVL_MAP:
 		print "DEBUG: Command MAP executed"
 		mapname = mapname.rstrip("\n") #El comando probablemente venga con \n.
 		with open(CYCLEMAP, 'r') as fmap: availablemaps = fmap.read().splitlines() #Abrimos el cycle y armamos la lista.
@@ -408,9 +407,9 @@ def cmd_map(caller, mapname): #True = Mapa cambiado; False = NO.
 
 ## Comando para ver y cambiar el mapa siguiente.
 def cmd_nextmap(caller, mapname): #True = Mapa cambiado; False = NO.
-	if check_admin(caller) >=5:
+	if check_admin(caller) >= LVL_NEXTMAP:
 		print "DEBUG: Command NEXTMAP executed"
-		with open(CYCLEMAP, 'r') as fmap: availablemaps = fmap.read().splitlines() #Abrimos el cycle y armamos la lista.
+		with open(CONFIG["CYCLEMAP"], 'r') as fmap: availablemaps = fmap.read().splitlines() #Abrimos el cycle y armamos la lista.
 		fmap.close()
 		if mapname == None:
 			buffer = send_rcon("g_nextmap").split('"') #Vemos si el nextmap ya se cambio.
@@ -438,34 +437,40 @@ def cmd_nextmap(caller, mapname): #True = Mapa cambiado; False = NO.
 
 ## Comando para iniciar el matchmode:
 def cmd_matchmode(caller, mode): #True = Listo para empezar; False = Error.
-	if check_admin(caller) == 10:
+	if check_admin(caller) >= LVL_CERRADO:
 		print "DEBUG: Command CERRADO executed" #Va con argumento (TS, CTF, etc...)
 		if mode.rstrip("\n") == "ts": #El comando probablemente venga con \n.
 			send_rcon("%s Cerrando el server para un partido de TS..." %BOT)
 			send_rcon("%s Reglas del juego cargadas: ^2UrTLA TS" %BOT)
-			send_rcon("exec zappa_urtlats.cfg")
+			send_rcon("exec %s" %CONFIG["MATCHTS"])
 			time.sleep(3) #Hacemos tiempo porque los players son luisitos.
 			send_rcon("%s Por favor, elegir un mapa para empezar." %BOT)
 			return True
 		elif mode.rstrip("\n") == "ctf": #El comando probablemente venga con \n.
-			send_rcon("%s No tengo la config para jugar un partido de CTF." %BOT)
-			return False #Esto esta hardcodeado, pero deberia agregarse.
+			send_rcon("%s Cerrando el server para un partido de CTF..." %BOT)
+			send_rcon("%s Reglas del juego cargadas: ^2UrTLA CTF" %BOT)
+			send_rcon("exec %s" %CONFIG["MATCHCTF"])
+			time.sleep(3) #Hacemos tiempo porque los players son luisitos.
+			send_rcon("%s Por favor, elegir un mapa para empezar." %BOT)
+			return True
 		send_rcon("%s No tengo disponible ese modo de juego." %BOT)
 		return False
 	else: print "DEBUG: Command CERRADO rejected, no admin"
 
 ## Comando para hacer publico el server:
 def cmd_publicmode(caller, mode): #True = Listo para empezar; False = Error.
-	if check_admin(caller) == 10:
+	if check_admin(caller) >= LVL_PUBLICO:
 		print "DEBUG: Command PUBLICO executed" #Va con argumento (TS, CTF, etc...)
 		if mode.rstrip("\n") == "ts": #El comando probablemente venga con \n.
-			send_rcon("%s Abriendo el server en modo TS." %BOT)
+			send_rcon("%s Configurando el server en modo ^2PUBLICO TS^7." %BOT)
 			time.sleep(1)
-			send_rcon("exec zappa.cfg")
+			send_rcon("exec %s" %CONFIG["PUBLICTS"])
 			return True
 		elif mode.rstrip("\n") == "ctf": #El comando probablemente venga con \n.
-			send_rcon("%s No tengo la config para poner el server en CTF." %BOT)
-			return False #Esto esta hardcodeado, pero deberia agregarse.
+			send_rcon("%s Abriendo el server en modo ^2PUBLICO CTF^7." %BOT)
+			time.sleep(1)
+			send_rcon("exec %s" %CONFIG["PUBLICCTF"])
+			return True
 		send_rcon("%s No tengo disponible ese modo de juego." %BOT)
 		return False
 	else: print "DEBUG: Command PUBLICO rejected, no admin"
@@ -476,9 +481,6 @@ if __name__ == "__main__":
 		dbconnection = lite.connect("Pantufla.db")
 		dbconnection.text_factory = str
 		dbcursor = dbconnection.cursor()
-		#dbcursor.execute("DROP TABLE IF EXISTS Players") #Solo para eliminar las tablas
-		#dbcursor.execute("DROP TABLE IF EXISTS Aliases") #en caso de error o prueba.
-		#dbcursor.execute("DROP TABLE IF EXISTS Bans")
 		dbcursor.execute("CREATE TABLE IF NOT EXISTS Players(ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Guid TEXT, Level INT)")
 		dbcursor.execute("CREATE TABLE IF NOT EXISTS Aliases(ID INT, ALIAS TEXT)")
 		dbcursor.execute("CREATE TABLE IF NOT EXISTS Bans(ID INT, Date FLOAT, Until FLOAT, Reason TEXT)")
@@ -487,29 +489,39 @@ if __name__ == "__main__":
 		sys.exit(1)
 
 	# Cargamos el archivo de config.
-	try: fconfig = open(CONFIG, 'r')
-	except IOError, e:
-		print "ERROR %s: Falla al abrir el archivo de configuracion." %e.args[0]
+	CONFIG ={}
+	try:
+		execfile(FCONFIG, CONFIG)
+		HOST = CONFIG["HOST"]
+		PORT = CONFIG["PORT"]
+		RCONPWD = CONFIG["PASSWORD"]
+		LVL_ALIAS = CONFIG["LVL_ALIAS"]
+		LVL_FORCE = CONFIG["LVL_FORCE"]
+		LVL_ID = CONFIG["LVL_ID"]
+		LVL_RECARGAR = CONFIG["LVL_RECARGAR"]
+		LVL_REINICIAR = CONFIG["LVL_REINICIAR"]
+		LVL_TEAMS = CONFIG["LVL_TEAMS"]
+		LVL_KICK = CONFIG["LVL_KICK"]
+		LVL_BAN = CONFIG["LVL_BAN"]
+		LVL_UNBAN = CONFIG["LVL_UNBAN"]
+		LVL_SLAP = CONFIG["LVL_SLAP"]
+		LVL_NUKE = CONFIG["LVL_NUKE"]
+		LVL_MUTE = CONFIG["LVL_MUTE"]
+		LVL_MAP = CONFIG["LVL_MAP"]
+		LVL_NEXTMAP = CONFIG["LVL_NEXTMAP"]
+		LVL_CERRADO = CONFIG["LVL_CERRADO"]
+		LVL_PUBLICO = CONFIG["LVL_PUBLICO"]
+	except:
+		print "ERROR: Falla al abrir el archivo de configuracion."
 		sys.exit(1)
-
-	while True:
-		configline = fconfig.readline().split()
-		if not configline: break
-		else:
-			if configline[0] == "HOST": HOST = configline[2]
-			elif configline[0] == "PORT": PORT = int(configline[2])
-			elif configline[0] == "PASSWORD": RCONPWD = configline[2]
-			elif configline[0] == "SERVERLOG": SERVERLOG = configline[2]
-			elif configline[0] == "CYCLEMAP": CYCLEMAP = configline[2]
 	print "[Pantufla]: Inicializando programa... OK."
 
 	# Inicializacion del socket y mandamos nuestros primeros mensajes.
 	send_rcon(VERMSG)
-	#send_rcon(BOT+WELCOME)
 	print "[Pantufla]: Enviando bienvenida... OK."
 
 	# Abrimos el log del server de urt y buscamos el EOF
-	fp = open(SERVERLOG, 'r')
+	fp = open(CONFIG["SERVERLOG"], 'r')
 	while True:
 		new = fp.readline()
 		if not new: break
