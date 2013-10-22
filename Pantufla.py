@@ -75,6 +75,9 @@ def parser_cmd(say):
 			if len(text) > 5: cmd_matchmode(playernum, text[5])
 		elif comando == "!publico":
 			if len(text) > 5: cmd_publicmode(playernum, text[5])
+		elif comando == "!ayuda" or comando == "!help":
+			if len(text) > 5: cmd_help(playernum, text[5])
+			else: cmd_help(playernum)
 
 ## La parte que se comunica con el servidor.
 def send_rcon(comando): #Devuelve lo que responda el server.
@@ -393,7 +396,7 @@ def cmd_map(caller, mapname): #True = Mapa cambiado; False = NO.
 	if check_admin(caller) >= LVL_MAP:
 		print "DEBUG: Command MAP executed"
 		mapname = mapname.rstrip("\n") #El comando probablemente venga con \n.
-		with open(CYCLEMAP, 'r') as fmap: availablemaps = fmap.read().splitlines() #Abrimos el cycle y armamos la lista.
+		with open(CONFIG["CYCLEMAP"], 'r') as fmap: availablemaps = fmap.read().splitlines() #Abrimos el cycle y armamos la lista.
 		fmap.close()
 		for x in range(len(availablemaps)):
 			if mapname in availablemaps[x]:
@@ -474,6 +477,100 @@ def cmd_publicmode(caller, mode): #True = Listo para empezar; False = Error.
 		send_rcon("%s No tengo disponible ese modo de juego." %BOT)
 		return False
 	else: print "DEBUG: Command PUBLICO rejected, no admin"
+
+def cmd_help(caller, item=None):
+	if check_admin(caller) >= LVL_AYUDA:
+		print "DEBUG: Command AYUDA executed"
+		if item == None:
+			send_rcon("%s Comandos disponibles: admin, alias, force, id," %BOT)
+			send_rcon("%s recargar, reiniciar, teams, kick, ban, unban, slap," %BOT)
+			send_rcon("%s nuke, mute, map, nextmap, cerrado, publico, ayuda." %BOT)
+			send_rcon("%s Para ver la ayuda de un comando: ^2!ayuda comando" %BOT)
+			return True
+		elif item.rstrip("\n") == "admin":
+			send_rcon("%s ^2!admin: ^7Para cambiar permisos a un jugador." %BOT)
+			send_rcon("%s Los 3 permisos son: regular, moderador, o admin." %BOT)
+			send_rcon("%s Por ejemplo: ^2!admin PePe moderador" %BOT)
+			send_rcon("%s Tambien puede usarse un @ID en lugar del nombre." %BOT)
+			return True
+		elif item.rstrip("\n") == "alias":
+			send_rcon("%s ^2!alias: ^7Para ver los aliases de un jugador." %BOT)
+			send_rcon("%s Puede usarse el nombre o un @ID si no esta conectado." %BOT)
+			send_rcon("%s Por ejemplo: ^2!alias PePe" %BOT)
+			return True
+		elif item.rstrip("\n") == "force":
+			send_rcon("%s ^2!alias: ^7Para mover un jugador a otro equipo." %BOT)
+			send_rcon("%s Los equipos son: ^1rojo^7, ^4azul ^7o spec." %BOT)
+			send_rcon("%s Por ejemplo: ^2!force PePe spec" %BOT)
+			return True
+		elif item.rstrip("\n") == "id":
+			send_rcon("%s ^2!id: ^7Para buscar el @ID de un jugador." %BOT)
+			send_rcon("%s El @ID sirve para ejecutar comandos hacia un jugador" %BOT)
+			send_rcon("%s que puede no estar conectado (como unban y alias)." %BOT)
+			send_rcon("%s Por ejemplo: ^2!id PePe" %BOT)
+			return True
+		elif item.rstrip("\n") == "recargar":
+			send_rcon("%s ^2!recargar: ^7Para recargar la config del servidor." %BOT)
+			send_rcon("%s Util para restaurar el servidor o cambiarlo de modo." %BOT)
+			return True
+		elif item.rstrip("\n") == "reiniciar":
+			send_rcon("%s ^2!reiniciar: ^7Para reiniciar el mapa o partida." %BOT)
+			send_rcon("%s Vuelve a empezar la partida nuevamente." %BOT)
+			return True
+		elif item.rstrip("\n") == "teams":
+			send_rcon("%s ^2!teams: ^7Para equilibrar la cantidad de jugadores." %BOT)
+			send_rcon("%s Pasa jugadores de un equipo a otro para equilibrarlos" %BOT)
+			send_rcon("%s solo en cantidad (no en habilidad)." %BOT)
+			return True
+		elif item.rstrip("\n") == "kick":
+			send_rcon("%s ^2!kick: ^7Para expulsar a un jugador de la partida." %BOT)
+			send_rcon("%s Por ejemplo: ^2!kick PePe" %BOT)
+			return True
+		elif item.rstrip("\n") == "ban":
+			send_rcon("%s ^2!ban: ^7Para prohibir el ingreso a un jugador." %BOT)
+			send_rcon("%s Puede usarse el nombre o un @ID si no esta conectado." %BOT)
+			send_rcon("%s Tambien hay que especificar una razon (una palabra)." %BOT)
+			send_rcon("%s Por ejemplo: ^2!ban PePe aimbot" %BOT)
+			return True
+		elif item.rstrip("\n") == "unban":
+			send_rcon("%s ^2!unban: ^7Para quitarle el ban a un jugador." %BOT)
+			send_rcon("%s Es necesario usar el @ID del jugador." %BOT)
+			send_rcon("%s Por ejemplo: ^2!unban @123" %BOT)
+			return True
+		elif item.rstrip("\n") == "mute":
+			send_rcon("%s ^2!mute: ^7Para enmudecer o dar voz a un jugador." %BOT)
+			send_rcon("%s (El bot sigue respondiendo a un jugador muteado)." %BOT)
+			send_rcon("%s Por ejemplo: ^2!mute PePe" %BOT)
+			return True
+		elif item.rstrip("\n") == "map":
+			send_rcon("%s ^2!map: ^7Para cambiar el mapa instantaneamente." %BOT)
+			send_rcon("%s Cambia el mapa a uno disponible en el cyclemap." %BOT)
+			send_rcon("%s Por ejemplo: ^2!map turnpike" %BOT)
+			return True
+		elif item.rstrip("\n") == "nextmap":
+			send_rcon("%s ^2!nextmap: ^7Para cambiar el mapa siguiente." %BOT)
+			send_rcon("%s Si no se pide un mapa, el bot responde cual se juega a continuacion." %BOT)
+			send_rcon("%s Por ejemplo: ^2!nextmap turnpike" %BOT)
+			return True
+		elif item.rstrip("\n") == "cerrado":
+			send_rcon("%s ^2!cerrado: ^7Para cerrar el servidor (matchmode)." %BOT)
+			send_rcon("%s Es necesario especificar el modo: TS, CTF, etc." %BOT)
+			send_rcon("%s Y despues cambiar el mapa (o recargar la config)." %BOT)
+			send_rcon("%s Por ejemplo: ^2!cerrado ts" %BOT)
+			return True
+		elif item.rstrip("\n") == "publico":
+			send_rcon("%s ^2!publico: ^7Para poner el server como publico." %BOT)
+			send_rcon("%s Tambien cambia el modo de juego si el server ya se" %BOT)
+			send_rcon("%s encuentra abierto (TS, CTF, etc)." %BOT)
+			send_rcon("%s Por ejemplo: ^2!publico ts" %BOT)
+			return True
+		elif item.rstrip("\n") == "ayuda":
+			send_rcon("%s ^2!ayuda: ^7Esta ayuda que estas viendo." %BOT)
+			return True
+		else:
+			send_rcon("%s No tengo tips disponibles para ese comando." %BOT)
+			return False
+	else: print "DEBUG: Command AYUDA rejected, no admin"
 	
 ## Principal:
 if __name__ == "__main__":
@@ -511,6 +608,7 @@ if __name__ == "__main__":
 		LVL_NEXTMAP = CONFIG["LVL_NEXTMAP"]
 		LVL_CERRADO = CONFIG["LVL_CERRADO"]
 		LVL_PUBLICO = CONFIG["LVL_PUBLICO"]
+		LVL_AYUDA = CONFIG["LVL_AYUDA"]
 	except:
 		print "ERROR: Falla al abrir el archivo de configuracion."
 		sys.exit(1)
