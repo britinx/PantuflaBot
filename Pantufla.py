@@ -18,36 +18,37 @@ CYCLEMAP = ""
 
 ## Super Parser (procurar que no se haga enorme)
 def parser_cmd(say):
+	say = say[7:]
 	text = say.lstrip().split(" ")
 	if len(text) < 2:
 		print "DEBUG: Bad line"
 		return False
-	print "DEBUG: Captured event: %s" %(text[1])
+	print "DEBUG: Captured event: %s" %(text[0])
 	#text[0] = Tiempo
 	#text[1] = Evento
 	#text[2] = Player Number
 	#text[3] = Player Name
 	#text[4] = Comando
 	#text[5,..] = Argumentos	
-	if "ClientUserinfo:" in text[1]:
-		check_player(text[2])
-	elif "say:" in text[1]:
-		comando = text[4].rstrip("\n")
-		player = text[3]
-		playernum = text[2]
+	if "ClientUserinfo:" in text[0]:
+		check_player(text[1])
+	elif "say:" in text[0]:
+		comando = text[3].rstrip("\n")
+		player = text[2]
+		playernum = text[1]
 		print "DEBUG: SAY detected: by %s %s" %(player,comando)
 		if comando == "!anew":
 			cmd_anew(player, playernum)
 		elif comando == "!pantufla":
 			cmd_pantufla(playernum)
 		elif comando == "!admin": #Siempre chequear el 5to argumento, es obligatorio.
-			if len(text) > 6: cmd_admin(playernum, text[5], text[6])
+			if len(text) > 5: cmd_admin(playernum, text[4], text[5])
 		elif comando == "!alias":
-			if len(text) > 5: cmd_alias(playernum, text[5])
+			if len(text) > 4: cmd_alias(playernum, text[4])
 		elif comando == "!force":
-			if len(text) > 6: cmd_force(playernum, text[5], text[6])
+			if len(text) > 5: cmd_force(playernum, text[4], text[5])
 		elif comando == "!id":
-			if len(text) > 5: cmd_id(playernum, text[5])
+			if len(text) > 4: cmd_id(playernum, text[4])
 		elif comando == "!recargar":
 			cmd_recargar(playernum)
 		elif comando == "!reiniciar":
@@ -55,28 +56,28 @@ def parser_cmd(say):
 		elif comando == "!teams":
 			cmd_teams(playernum)
 		elif comando == "!kick" or comando == "!k":
-			if len(text) > 5: cmd_kick(playernum, text[5])
+			if len(text) > 4: cmd_kick(playernum, text[4])
 		elif comando == "!ban":
-			if len(text) > 6: cmd_ban(playernum, text[5], text[6])
+			if len(text) > 5: cmd_ban(playernum, text[4], text[5])
 		elif comando == "!unban":
-			if len(text) > 5: cmd_unban(playernum, text[5])
+			if len(text) > 4: cmd_unban(playernum, text[4])
 		elif comando == "!slap":
-			if len(text) > 5: cmd_slap(playernum, text[5])
+			if len(text) > 4: cmd_slap(playernum, text[4])
 		elif comando == "!nuke":
-			if len(text) > 5: cmd_nuke(playernum, text[5])
+			if len(text) > 4: cmd_nuke(playernum, text[4])
 		elif comando == "!mute":
-			if len(text) > 5: cmd_mute(playernum, text[5])
+			if len(text) > 4: cmd_mute(playernum, text[4])
 		elif comando == "!map":
-			if len(text) > 5: cmd_map(playernum, text[5])
+			if len(text) > 4: cmd_map(playernum, text[4])
 		elif comando == "!nextmap":
-			if len(text) > 5: cmd_nextmap(playernum, text[5])
+			if len(text) > 4: cmd_nextmap(playernum, text[4])
 			else: cmd_nextmap(playernum, None)
 		elif comando == "!cerrado":
-			if len(text) > 5: cmd_matchmode(playernum, text[5])
+			if len(text) > 4: cmd_matchmode(playernum, text[4])
 		elif comando == "!publico":
-			if len(text) > 5: cmd_publicmode(playernum, text[5])
+			if len(text) > 4: cmd_publicmode(playernum, text[4])
 		elif comando == "!ayuda" or comando == "!help":
-			if len(text) > 5: cmd_help(playernum, text[5])
+			if len(text) > 4: cmd_help(playernum, text[4])
 			else: cmd_help(playernum)
 
 ## La parte que se comunica con el servidor.
@@ -136,10 +137,14 @@ def check_admin(playernum): #True = Admin; False = NO
 def check_player(playernum): #Devuelve NULL
 	print "DEBUG: Checking user info changed..."
 	ID = send_rcon("dumpuser %s" %playernum).split("\n")
-	for i in range(3,len(ID)-1):
+	print ID
+	playername = False
+	playerguid = False
+	for i in range(len(ID)):
 		buf = ID[i].split()
-		if buf[0] == "name": playername = buf[1] #De toda la info buscamos el nick
-		elif buf[0] == "cl_guid": playerguid = buf[1] #y su GUID
+		if len(ID[i]) > 2:
+			if buf[0] == "name": playername = buf[1] #De toda la info buscamos el nick
+			elif buf[0] == "cl_guid": playerguid = buf[1] #y su GUID
 	if playerguid:
 		# Chequeamos si el player es nuevo.
 		dbcursor.execute("SELECT * FROM Players WHERE Guid=?", (playerguid,)) #Chequeamos si la GUID ya esta guardada
@@ -170,7 +175,8 @@ def check_player(playernum): #Devuelve NULL
 				print "DEBUG: Player %s no habilitado para jugar." %playername
 			else:
 				print "DEBUG: Ban temporal no implementado."
-		return True	
+		return True
+	else: print "ERROR: playerguid not found."
 
 ## Puro easteregg.
 def cmd_anew(playername, playernum):
